@@ -71,7 +71,8 @@ body.dialog-open {
   overflow: hidden;
 }
 
-body.settings-open #settings-underlay {
+body.settings-open #settings-underlay,
+body.history-open #history-underlay {
   display: block;
 }
 
@@ -203,7 +204,7 @@ input[type="button"] {
   width: 100%;
 }
 
-#guess-wrapper #guess {
+#guess-wrapper #guess{
   color: black;
   background-color: #ffffff;
   width: 100%;
@@ -230,11 +231,12 @@ th {
 }
 
 th#chronoOrder,
-th#alphaOrder,
+th#alphaOrder, 
 th#similarityOrder,
 input#give-up-btn,
 input#guess-btn,
 input#lower,
+input[type="button"],
 button {
   cursor: pointer;
 }
@@ -419,4 +421,19 @@ body.dark .subtext {
 
 body.dark.snow #embedim--snow {
   display: block;
+}
+
+#history-input,
+#puzzle-number,
+#rank-number {
+  padding: .3em;
+}
+
+#history-manage-wrapper p {
+  margin-bottom: 10px;
+}
+#history-input {
+  display:block;
+  width: 100%;
+  margin-bottom: 5px;
 }

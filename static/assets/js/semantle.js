@@ -11,13 +11,15 @@
 
 let gameOver = false;
 let guesses = [];
+let hint = [];
 let guessed = new Set();
 let guessCount = 0;
+let hintCount = 0;
 let model = null;
 let numPuzzles = 4650;
 const now = Date.now();
 const initialDate = new Date('2022-04-01T00:00:00+09:00');
-const puzzleNumber = Math.floor((new Date() - initialDate) / 86400000) % numPuzzles;
+let puzzleNumber = Math.floor((new Date() - initialDate) / 86400000) % numPuzzles;
 const yesterdayPuzzleNumber = (puzzleNumber + numPuzzles - 1) % numPuzzles;
 const storage = window.localStorage;
 let chrono_forward = 1;
@@ -28,6 +30,13 @@ let shareGuesses = storage.getItem("shareGuesses") === 'false' ? false: true;
 let shareTime = storage.getItem("shareTime") === 'false' ? false: true;
 let shareTopGuess = storage.getItem("shareTopGuess") === 'false' ? false: true;
 
+const options = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+};
+
+const hint_table_form = `<tr><th>#</th><th>힌트 단어</th><th>유사도</th><th>유사도 순위</th></tr>`
 function $(id) {
     if (id.charAt(0) !== '#') return false;
     return document.getElementById(id.substring(1));
@@ -49,7 +58,7 @@ function share() {
 }
 
 const words_selected = [];
-const cache = {};
+let cache = {};
 let similarityStory = null;
 
 function guessRow(similarity, oldGuess, percentile, guessNumber, guess) {
@@ -133,7 +142,34 @@ function solveStory(guesses, puzzleNumber) {
     return `저런… ${puzzleNumber}번째 꼬맨틀을 포기했어요..ㅠ\n${guessCountInfo}` +
             `${timeInfo}${topGuessMsg}https://semantle-ko.newsjel.ly/`;
 }
+//암호화 관련 함수
+//====================================================================================================
+const secretKey = 'semantle-korea'; // 암호화에 사용할 비밀 키
 
+// 암호화 함수
+function encryptText(data) {
+    try {
+        const jsonString = JSON.stringify(data);
+        const encrypted = CryptoJS.AES.encrypt(jsonString, secretKey).toString();
+        return encrypted;
+    } catch (error) {
+        alert('공유 코드 생성 오류');
+        return null;
+    }
+}
+
+// 복호화 함수
+function decryptText(encryptedText) {
+    try {
+        const bytes = CryptoJS.AES.decrypt(encryptedText, secretKey);
+        const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+        return JSON.parse(decrypted);
+    } catch (error) {
+        alert('공유 코드 복호화 오류');
+        return null;
+    }
+}
+//====================================================================================================
 let Semantle = (function() {
     async function getSimilarityStory(puzzleNumber) {
         const url = "/similarity/" + puzzleNumber;
@@ -183,13 +219,13 @@ let Semantle = (function() {
 
     async function init() {
         let yesterday = await getYesterday()
-        $('#yesterday2').innerHTML = `어제의 정답 단어는 <b>"${yesterday}"</b>입니다.`;
-        $('#yesterday-nearest1k').innerHTML = `정답 단어와 비슷한, <a href="/nearest1k/${yesterdayPuzzleNumber}">유사도 기준 상위 1,000개의 단어</a>를 확인할 수 있습니다.`;
-
+        const today = new Date(now);
+        const formattedDate = today.toLocaleDateString('ko-KR', options);
+        $('#today-number').innerHTML = `${formattedDate} 꼬맨틀 번호 : <b>${puzzleNumber}</b>`;
         try {
             similarityStory = await getSimilarityStory(puzzleNumber);
             $('#similarity-story').innerHTML = `
-            ${puzzleNumber}번째 꼬맨틀의 정답 단어를 맞혀보세요.<br/>
+            <b>${puzzleNumber}</b>번째 꼬맨틀의 정답 단어를 맞혀보세요.<br/>
             정답 단어와 가장 유사한 단어의 유사도는 <b>${(similarityStory.top * 100).toFixed(2)}</b> 입니다.
             10번째로 유사한 단어의 유사도는 ${(similarityStory.top10 * 100).toFixed(2)}이고,
             1,000번째로 유사한 단어의 유사도는 ${(similarityStory.rest * 100).toFixed(2)} 입니다.`;
@@ -205,16 +241,23 @@ let Semantle = (function() {
             storage.removeItem("endTime");
             storage.setItem("puzzleNumber", puzzleNumber);
         }
+        const storageHistory = storage.getItem('history');
+        if (storageHistory === null) {
+            storage.setItem('history', JSON.stringify([]));
+        }
+        loadHistory(puzzleNumber);
 
         if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
             prefersDarkColorScheme = true;
         }
 
         $("#settings-button").addEventListener('click', openSettings);
+        $("#history-button").addEventListener('click', openHistory);
 
         document.querySelectorAll(".dialog-underlay, .dialog-close").forEach((el) => {
             el.addEventListener('click', () => {
                 document.body.classList.remove('dialog-open', 'settings-open');
+                document.body.classList.remove('dialog-open', 'history-open');
             });
         });
 
@@ -251,6 +294,55 @@ let Semantle = (function() {
         $('#share-guesses').checked = shareGuesses;
         $('#share-time').checked = shareTime;
         $('#share-top-guess').checked = shareTopGuess;
+
+        $('#export-history-btn').addEventListener('click', async function(event) {
+            const semantleHistory = JSON.parse(storage.getItem('history')) || [];
+            let history_data = {};
+            history_data['history'] = semantleHistory;
+            for (let entry of semantleHistory) { //각 회차별 기록을 순회하며
+                const [number, result, guessCount, hintCount] = entry;
+                const storageGuesses = JSON.parse(storage.getItem(`${number}_guesses`));
+                const storageHints = JSON.parse(storage.getItem(`${number}_hints`));
+                if (storageGuesses !== null) {
+                    history_data[`${number}_guesses`] = storageGuesses;
+                }
+                if (storageHints !== null) {
+                    history_data[`${number}_hints`] = storageHints;
+                }
+            }
+            console.log(history_data);
+            const encryptedText = encryptText(history_data);
+            document.getElementById('history-input').value = encryptedText;
+            //클립보드 복사 기능
+            const copied = ClipboardJS.copy(encryptedText);
+            if (copied) {
+                alert("클립보드로 복사했습니다.");
+            }
+        });
+        $('#import-history-btn').addEventListener('click', async function(event) {
+            const encryptedText = document.getElementById('history-input').value;
+            if (encryptText === null || encryptedText === '') {
+                alert("공유 코드를 입력해주세요.");
+                return;
+            }
+            if(confirm("기존 기록은 삭제됩니다. 계속하시겠습니까?")) {
+                let history_data = decryptText(encryptedText);
+                //데이터 유효성 검사 추가
+                const semantleHistory = history_data['history'];
+                storage.setItem('history', JSON.stringify(semantleHistory));
+                for (let entry of semantleHistory) {
+                    const [number, result, guessCount, hintCount] = entry;
+                    if (history_data.hasOwnProperty(`${number}_guesses`)) {
+                        storage.setItem(`${number}_guesses`, JSON.stringify(history_data[`${number}_guesses`]));
+                    }
+                    if (history_data.hasOwnProperty(`${number}_hints`)) {
+                        storage.setItem(`${number}_hints`, JSON.stringify(history_data[`${number}_hints`]));
+                    }
+                }
+                updateHistory();
+                loadHistory(puzzleNumber);
+            }
+        });
 
         $('#give-up-btn').addEventListener('click', async function(event) {
             if (!gameOver) {
@@ -337,6 +429,22 @@ let Semantle = (function() {
 
             updateGuesses(guess);
 
+            const semantleHistory = JSON.parse(storage.getItem('history')) || [];  // 문자열을 JSON으로 파싱
+            const exists = semantleHistory.findIndex(entry => entry[0] === puzzleNumber);  // puzzleNumber와 일치하는 인덱스 찾기
+            if (!gameOver) {
+                const newEntry = [puzzleNumber, 'solving', guessCount, hintCount];
+                if (exists === -1) {
+                    // 정보 추가
+                    semantleHistory.push(newEntry);
+                } else {
+                    // 정보 업데이트
+                    semantleHistory[exists] = newEntry;
+                }
+                semantleHistory.sort(function(a, b){return a[0]-b[0]});
+                storage.setItem('history', JSON.stringify(semantleHistory));
+                storage.setItem(`${puzzleNumber}_guesses`, JSON.stringify(guesses.slice(0, 10)));
+            }
+            
             if (guessData.sim == 1 && !gameOver) {
                 endGame(true, true);
                 gtag('event', 'win', {
@@ -364,10 +472,125 @@ let Semantle = (function() {
                 endGame(winState > 0, false);
             }
         }
+        //추가한 부분
+        //====================================================================================================
+        $('#load-puzzle-btn').addEventListener('click', async function(event) {
+            puzzleNumber = Number(document.getElementById('puzzle-number').value);
+            fetch(`/new_puzzle/${puzzleNumber}`)
+                .then(response => response.json())
+                .then(data => {
+                    storage.removeItem("guesses");
+                    storage.removeItem("winState");
+                    storage.removeItem("startTime");
+                    storage.removeItem("endTime");
+                    storage.setItem("puzzleNumber", puzzleNumber);
+                    gameOver = false;
+                    guesses = [];
+                    guessCount = 0;
+                    cache = {};
+                    guessed.clear();
+                    hintCount = 0;
+                    $('#give-up-btn').style = "display:block;";
+                    $('#response').classList.remove("gaveup");
+                    $('#response').innerHTML = '';
+                    let inner = `<tr><th id="chronoOrder">#</th><th id="alphaOrder">추측한 단어</th><th id="similarityOrder">유사도</th><th>유사도 순위</th></tr>`;
+                    $('#guesses').innerHTML = inner;
+                    $('#hint-history').innerHTML = '';
+                    hint = [];
+                    //기록 존재시 기록 불러오기
+                    loadHistory(puzzleNumber);
+                    //회차 정보 업데이트
+                    fetch(`/similarity/${puzzleNumber}`)
+                        .then(response => response.json())
+                        .then(async data => {
+                            similarityStory = data;
+                            $('#similarity-story').innerHTML = `
+                            <b>${puzzleNumber}</b>번째 꼬맨틀의 정답 단어를 맞혀보세요.<br/>
+                            정답 단어와 가장 유사한 단어의 유사도는 <b>${(similarityStory.top * 100).toFixed(2)}</b> 입니다.
+                            10번째로 유사한 단어의 유사도는 ${(similarityStory.top10 * 100).toFixed(2)}이고,
+                            1,000번째로 유사한 단어의 유사도는 ${(similarityStory.rest * 100).toFixed(2)} 입니다.`;
+                        })
+                        .catch(error => console.error('Error:', error));
+                })
+                .catch(error => console.error('Error:', error));
+        });
+    
+        $('#hint-btn').addEventListener('click', async function(event) {
+            let rank = document.getElementById('rank-number').value;
+            fetch(`/hint/${puzzleNumber}/${rank}`)
+                .then(response => response.json())
+                .then(data => {
+                    const newEntry = [data[0].word, data[0].similarity, data[0].rank];
+                    hint.push(newEntry);
+                    hint.sort(function(a, b){return b[1]-a[1]});
+                    let hint_history = hint_table_form;
+                    for (let entry of hint) {
+                        hint_history += `<tr><td>${hint.indexOf(entry) + 1}</td><td>${entry[0]}</td><td>${entry[1]}</td><td>${entry[2]}</td></tr>`;
+                    }
+                    $('#hint-history').innerHTML = hint_history;
+                    hintCount += 1;
+                    storage.setItem(`${puzzleNumber}_hints`, JSON.stringify(hint.slice(0, 10)));
+                    //history 추가
+                    let semantleHistory = JSON.parse(storage.getItem('history')) || [];  // 문자열을 JSON으로 파싱
+                    let exists = semantleHistory.findIndex(entry => entry[0] === puzzleNumber);  // puzzleNumber와 일치하는 인덱스 찾기
+                    if (exists === -1 && !gameOver) {
+                        semantleHistory.push([puzzleNumber, 'solving', guessCount, hintCount]);
+                    }
+                    else {
+                        semantleHistory[exists] = [puzzleNumber, 'solving', guessCount, hintCount];
+                    }
+                    semantleHistory.sort(function(a, b){return a[0]-b[0]});
+                    storage.setItem('history', JSON.stringify(semantleHistory));
+                })
+                .catch(error => console.error('Error:', error));
+        });
+        //====================================================================================================
     }
 
     function openSettings() {
         document.body.classList.add('dialog-open', 'settings-open');
+    }
+
+    function openHistory() {
+        document.body.classList.add('dialog-open', 'history-open');
+        updateHistory();
+    }
+    function updateHistory() {
+        $('#history-table').innerHTML = `<tr><th>회차</th><th>결과</th><th>추측 횟수</th><th>힌트 횟수</th></tr>`;
+        const semantleHistory = JSON.parse(storage.getItem('history')) || [];
+        let totalGuessCount = 0;
+        let totalHintCount = 0;
+        let totalWinCount = 0;
+        let totalGiveupCount = 0;
+        let totalSolvingCount = 0;
+        for (let entry of semantleHistory) {
+            let [number, result, guessCount, hintCount] = entry;
+            let resultText;
+            if (result === 'win') { 
+                resultText = '<td style="color: #4caf50">정답</td>'; 
+                totalWinCount += 1;
+            }
+            else if (result === 'giveup') {
+                resultText = '<td style="color: #f44336">포기</td>';
+                totalGiveupCount += 1;
+            }
+            else if (result === 'solving') {
+                resultText = '<td style="color: #2196f3">진행중</td>'; 
+                totalSolvingCount += 1;
+            }
+            else {
+                resultText = '알 수 없음'; 
+            }
+            $('#history-table').innerHTML += `<tr><td>${number}</td>${resultText}<td>${guessCount}</td><td>${hintCount}</td></tr>`;
+            totalGuessCount += guessCount;
+            totalHintCount += hintCount;
+        }
+        $('#history-sum').innerHTML = `총 ${semantleHistory.length}회차의 기록이 있습니다.</br>
+        <span style="color: #2196f3">진행중</span> : ${totalSolvingCount}, 
+        <span style="color: #4caf50">정답</span> : ${totalWinCount}, 
+        <span style="color: #f44336">포기</span> : ${totalGiveupCount}</br>
+        총 추측 횟수 : ${totalGuessCount}회, 
+        총 힌트 횟수 : ${totalHintCount}회`;
     }
 
     function updateGuesses(guess) {
@@ -507,25 +730,59 @@ let Semantle = (function() {
         response += `<input type="button" value="기록 복사하기" id="result" onclick="share()" class="button"><br />`
         const totalGames = stats['wins'] + stats['giveups'] + stats['abandons'];
         response += `<br/>
-        ${puzzleNumber + 1}번째 꼬맨틀은 오늘 밤 자정(한국 시간 기준)에 열립니다.<br/>
-<br/>
-<b>나의 플레이 기록</b>: <br/>
-<table>
-<tr><th>가장 처음 풀었던 꼬맨틀 번호:</th><td>${stats['firstPlay']}</td></tr>
-<tr><th>도전한 게임 횟수:</th><td>${totalGames}</td></tr>
-<tr><th>정답 횟수:</th><td>${stats['wins']}</td></tr>
-<tr><th>연속 정답 횟수:</th><td>${stats['winStreak']}</td></tr>
-<tr><th>포기 횟수:</th><td>${stats['giveups']}</td></tr>
-<tr><th>지금까지 추측 단어 총 갯수:</th><td>${stats['totalGuesses']}</td></tr>
-</table>
-`;
+        <b>나의 플레이 기록</b>: <br/>
+        <table>
+        <tr><th>가장 처음 풀었던 꼬맨틀 번호:</th><td>${stats['firstPlay']}</td></tr>
+        <tr><th>도전한 게임 횟수:</th><td>${totalGames}</td></tr>
+        <tr><th>정답 횟수:</th><td>${stats['wins']}</td></tr>
+        <tr><th>연속 정답 횟수:</th><td>${stats['winStreak']}</td></tr>
+        <tr><th>포기 횟수:</th><td>${stats['giveups']}</td></tr>
+        <tr><th>지금까지 추측 단어 총 갯수:</th><td>${stats['totalGuesses']}</td></tr>
+        </table>
+        <b>회차별 플레이 기록은 상단 기록 아이콘 클릭으로 확인할 수 있습니다.</b>
+        `;
         $('#response').innerHTML = response;
 
         if (countStats) {
             saveGame(guesses.length, won ? 1 : 0);
         }
+        // 기록 저장
+        let semantleHistory = JSON.parse(storage.getItem('history')) || [];  // 문자열을 JSON으로 파싱
+        let exists = semantleHistory.findIndex(entry => entry[0] === puzzleNumber);  // puzzleNumber와 일치하는 인덱스 찾기
+        if (exists === -1) {
+            // 정보 추가
+            const newEntry = [Number(puzzleNumber), won ? 'win' : 'giveup', guessCount, hintCount];
+            semantleHistory.push(newEntry);
+        } else {
+            // 정보 업데이트
+            semantleHistory[exists] = [puzzleNumber, won ? 'win' : 'giveup', guessCount, hintCount];
+        }
+        storage.setItem('history', JSON.stringify(semantleHistory));
+        storage.removeItem(`${puzzleNumber}_hints`);
+        storage.removeItem(`${puzzleNumber}_guesses`);
     }
-
+    function loadHistory(number) {
+        const storageHistory = JSON.parse(storage.getItem('history')) || [];
+        const exists = storageHistory.findIndex(entry => entry[0] === number);
+        if (exists !== -1 && storageHistory[exists][1] !== 'win') {
+            const storageGuesses = JSON.parse(storage.getItem(`${number}_guesses`));
+            const storageHints = JSON.parse(storage.getItem(`${number}_hints`));
+            if (storageGuesses !== null) {
+                guessCount = storageHistory[exists][2];
+                guesses = storageGuesses;
+                updateGuesses("");
+            }
+            if(storageHints !== null) {
+                hintCount = storageHistory[exists][3];
+                hint = storageHints;
+                let hint_history = hint_table_form;
+                for (let entry of hint) {
+                    hint_history += `<tr><td>${hint.indexOf(entry) + 1}</td><td>${entry[0]}</td><td>${entry[1]}</td><td>${entry[2]}</td></tr>`;
+                }
+                $('#hint-history').innerHTML = hint_history;
+            }
+        }
+    }
     return {
         init: init,
         checkMedia: checkMedia,

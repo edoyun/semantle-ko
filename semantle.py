@@ -52,7 +52,6 @@ def update_nearest():
     app.secrets[next_puzzle] = next_word
     app.nearests[next_puzzle] = get_nearest(next_puzzle, next_word, valid_nearest_words, valid_nearest_vecs)
 
-
 @app.route('/')
 def get_index():
     return render_template('index.html')
@@ -117,10 +116,41 @@ def get_nearest_1k(day: int):
         for w, k in app.nearests[day].items() if w != solution]
     return render_template('top1k.html', word=solution, words=words, day=day)
 
-
 @app.route('/giveup/<int:day>')
 def give_up(day: int):
     if day not in app.secrets:
         return '저런...', 404
     else:
         return app.secrets[day]
+    
+    
+#추가한 부분
+#================================================================================================
+@app.route('/new_puzzle/<int:day>')
+def new_puzzle(day: int):
+    new_puzzle_number = day
+    secret_word = secrets[new_puzzle_number]
+    
+    # 만약 퍼즐을 미리 생성하지 않았다면, 지금 생성
+    if new_puzzle_number not in app.secrets:
+        app.secrets[new_puzzle_number] = secret_word
+        app.nearests[new_puzzle_number] = get_nearest(new_puzzle_number, secret_word, valid_nearest_words, valid_nearest_vecs)
+    
+    return jsonify({
+        "puzzle_number": new_puzzle_number,
+        "secret_word": secret_word
+    })
+
+@app.route('/hint/<int:day>/<int:rank>')
+def get_hint(day: int, rank: int):
+    if app.secrets[day] == '':
+        return '해당 회차 정보가 없어요.', 404
+    else:
+        word = [
+            dict(
+                word=w,
+                rank=k[0],
+                similarity="%0.2f" % (k[1] * 100)
+            )
+        for w, k in app.nearests[day].items() if k[0] == rank]
+        return word
