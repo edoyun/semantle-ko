@@ -770,6 +770,10 @@ let Semantle = (function() {
             if (storageGuesses !== null) {
                 guessCount = storageHistory[exists][2];
                 guesses = storageGuesses;
+                guessed = new Set();
+                for (let guess of guesses) {
+                    guessed.add(guess[1]);
+                }
                 updateGuesses("");
             }
             if(storageHints !== null) {
