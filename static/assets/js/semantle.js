@@ -442,7 +442,7 @@ let Semantle = (function() {
                 }
                 semantleHistory.sort(function(a, b){return a[0]-b[0]});
                 storage.setItem('history', JSON.stringify(semantleHistory));
-                storage.setItem(`${puzzleNumber}_guesses`, JSON.stringify(guesses.slice(0, 10)));
+                storage.setItem(`${puzzleNumber}_guesses`, JSON.stringify(guesses.slice(0, 20)));
             }
             
             if (guessData.sim == 1 && !gameOver) {
