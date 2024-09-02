@@ -516,8 +516,14 @@ let Semantle = (function() {
         });
     
         $('#hint-btn').addEventListener('click', async function(event) {
-            let rank = document.getElementById('rank-number').value;
-            fetch(`/hint/${puzzleNumber}/${rank}`)
+            let start = (9-hintCount)*100+1;
+            let end = (10-hintCount)*100;
+            let random = Math.floor(Math.random() * (end - start + 1) + start);
+            if (hintCount >= 10) {
+                alert('더 이상 힌트를 제공할 수 없습니다.');
+                return;
+            }
+            fetch(`/hint/${puzzleNumber}/${random}`)
                 .then(response => response.json())
                 .then(data => {
                     const newEntry = [data[0].word, data[0].similarity, data[0].rank];
@@ -529,6 +535,14 @@ let Semantle = (function() {
                     }
                     $('#hint-history').innerHTML = hint_history;
                     hintCount += 1;
+                    start = (9-hintCount)*100+1;
+                    end = (10-hintCount)*100;
+                    if (hintCount >= 10) {
+                        $('#hint-info').innerHTML = `힌트 횟수를 모두 사용했습니다.`;
+                    }
+                    else {
+                        $('#hint-info').innerHTML = `유사도 ${start}~${end}위 사이 단어를 보여줍니다. 남은 힌트 횟수: ${10-hintCount}`;
+                    }
                     storage.setItem(`${puzzleNumber}_hints`, JSON.stringify(hint.slice(0, 10)));
                     //history 추가
                     let semantleHistory = JSON.parse(storage.getItem('history')) || [];  // 문자열을 JSON으로 파싱
@@ -785,6 +799,16 @@ let Semantle = (function() {
                 }
                 $('#hint-history').innerHTML = hint_history;
             }
+            
+            
+        }
+        let start = (9-hintCount)*100+1;
+        let end = (10-hintCount)*100;
+        if (hintCount >= 10) {
+            $('#hint-info').innerHTML = `힌트 횟수를 모두 사용했습니다.`;
+        }
+        else {
+            $('#hint-info').innerHTML = `유사도 ${start}~${end}위 사이 단어를 보여줍니다. 남은 힌트 횟수: ${10-hintCount}`;
         }
     }
     return {
