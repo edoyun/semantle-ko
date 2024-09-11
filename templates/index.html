@@ -2,11 +2,28 @@
 <html lang="en">
 
 <head>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-5L7LD3BS');</script>
+    <!-- End Google Tag Manager -->
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-DRHP497VEH"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-DRHP497VEH');
+    </script>
+    <!--END TAG-->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
     <meta property="og:type" content="website">
-    <meta property="og:title" content="꼬맨틀 - 단어 유사도 추측 게임 - 뉴스젤리 : 데이터 시각화 전문 기업">
+    <meta property="og:title" content="꼬맨틀 - 단어 유사도 추측 게임 - 수정 버전">
     <meta property="og:url" content="{{ request.base_url }}">
     <meta property="og:image" content="{{ request.host_url }}assets/og_image.png">
     <meta property="og:description" content="하루에 한 번, 오늘의 단어를 맞혀보세요. 단어를 입력하면 정답 단어와의 유사도를 보여줍니다.">
@@ -22,16 +39,6 @@
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
     <link rel="manifest" href="/assets/manifest.webmanifest">
 
-    <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y0ED7GGKGN"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
-
-        gtag('config', 'G-Y0ED7GGKGN');
-    </script>
-
     <!--
     Copyright (c) 2022, Newsjelly, forked from Semantlich by Johannes Gätjen semantlich.johannesgaetjen.de and Semantle by David Turner <novalis@novalis.org> semantle.novalis.org
 
@@ -44,13 +51,17 @@
 </head>
 
 <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5L7LD3BS"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <!-- include script here so that we can set dark mode of body on initialization -->
     <script src="https://app.embed.im/snow.js" defer></script>
     <script src="/assets/js/semantle.js?v=20230228"></script>
-    <a class="banner" href="https://newsjel.ly/?utm_source=semantle_ko&utm_medium=top_banner" target="_blank">
-        <img src="/assets/icon.svg" alt="뉴스젤리 로고">
-        <span>데이터 활용에 가치를 더하는 데이터 시각화, <b>NEWSJELLY</b></span>
-    </a>
+    <div class="banner">
+        <a href="https://newsjel.ly/?utm_source=semantle_ko&utm_medium=top_banner" target="_blank"><img src="/assets/icon.svg" alt="뉴스젤리 로고"></a>
+        <span>Made by <a href="https://github.com/NewsJelly/semantle-ko" target="_blank"><b>NEWSJELLY</b></a>, Edited by <a href="https://github.com/mangddung/semantle-ko" target="_blank"><b>Mangddung</b></a></span>
+    </div>
     <div class="container">
         <header>
             <h2>꼬맨틀 - 단어 유사도 추측 게임</h2>
