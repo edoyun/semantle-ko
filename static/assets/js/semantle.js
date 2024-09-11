@@ -16,7 +16,7 @@ let guessed = new Set();
 let guessCount = 0;
 let hintCount = 0;
 let model = null;
-let numPuzzles = 4650;
+let numPuzzles = 4235;
 const now = Date.now();
 const initialDate = new Date('2022-04-01T00:00:00+09:00');
 let puzzleNumber = Math.floor((new Date() - initialDate) / 86400000) % numPuzzles;
@@ -187,9 +187,9 @@ let Semantle = (function() {
         }
         const url = "/guess/" + puzzleNumber + "/" + word;
         const response = await fetch(url);
-        gtag('event', 'guess', {
-            'event_category' : 'game_event',
-            'event_label' : word,
+        gtag('event', 'guess_try_count', {
+            'event_category' : `${puzzleNumber}`,
+            'event_label' : 'guess_try',
         });
         try {
             return await response.json();
@@ -357,13 +357,18 @@ let Semantle = (function() {
                     updateGuesses(guess);
                     endGame(false, true);
                     gtag('event', 'giveup', {
-                        'event_category' : 'game_event',
+                        'event_category' : `${puzzleNumber}`,
                         'event_label' : 'giveup',
                     });
                     gtag('event', 'giveup', {
-                        'event_category' : 'game_event',
-                        'event_label' : 'guess_count',
+                        'event_category' : `${puzzleNumber}`,
+                        'event_label' : 'guesses',
                         'value' : guessCount,
+                    });
+                    gtag('event', 'giveup', {
+                        'event_category' : `${puzzleNumber}`,
+                        'event_label' : 'hints',
+                        'value' : hintCount,
                     });
                 }
             }
@@ -403,10 +408,9 @@ let Semantle = (function() {
                     storage.setItem('startTime', Date.now())
                 }
                 guessCount += 1;
-                gtag('event', 'nth_guess', {
-                    'event_category' : 'game_event',
-                    'event_label' : guess,
-                    'value' : guessCount,
+                gtag('event', 'guess_count', {
+                    'event_category' : `${puzzleNumber}`,
+                    'event_label' : 'guess',
                 });
                 guessed.add(guess);
 
@@ -448,13 +452,18 @@ let Semantle = (function() {
             if (guessData.sim == 1 && !gameOver) {
                 endGame(true, true);
                 gtag('event', 'win', {
-                    'event_category' : 'game_event',
+                    'event_category' : `${puzzleNumber}`,
                     'event_label' : 'win',
                 });
                 gtag('event', 'win', {
-                    'event_category' : 'game_event',
-                    'event_label' : 'guess_count',
+                    'event_category' : `${puzzleNumber}`,
+                    'event_label' : 'guesses',
                     'value' : guessCount,
+                });
+                gtag('event', 'win', {
+                    'event_category' : `${puzzleNumber}`,
+                    'event_label' : 'hints',
+                    'value' : hintCount,
                 });
             }
             return false;
@@ -555,6 +564,10 @@ let Semantle = (function() {
                     }
                     semantleHistory.sort(function(a, b){return a[0]-b[0]});
                     storage.setItem('history', JSON.stringify(semantleHistory));
+                    gtag('event', 'hint_count', {
+                        'event_category' : `${puzzleNumber}`,
+                        'event_label' : 'hint',
+                    });
                 })
                 .catch(error => console.error('Error:', error));
         });
@@ -799,8 +812,6 @@ let Semantle = (function() {
                 }
                 $('#hint-history').innerHTML = hint_history;
             }
-            
-            
         }
         let start = (9-hintCount)*100+1;
         let end = (10-hintCount)*100;
