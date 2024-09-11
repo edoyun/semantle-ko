@@ -50,6 +50,7 @@ body .banner {
 
 body .banner img {
   height: 1.7em;
+  display: block;
 }
 
 body .banner span {
