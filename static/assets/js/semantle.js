@@ -484,6 +484,11 @@ let Semantle = (function() {
         //추가한 부분
         //====================================================================================================
         $('#load-puzzle-btn').addEventListener('click', async function(event) {
+            let puzzleValue = Number(document.getElementById('puzzle-number').value);
+            if (puzzleValue<=0 || puzzleValue>numPuzzles) {
+                alert(`1과 ${numPuzzles}사이 숫자를 입력해주세요.`)
+                return;
+            }
             puzzleNumber = Number(document.getElementById('puzzle-number').value);
             fetch(`/new_puzzle/${puzzleNumber}`)
                 .then(response => response.json())
