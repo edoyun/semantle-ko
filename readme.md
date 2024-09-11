@@ -12,7 +12,8 @@
 
 정답 목록 - 모든 단어 -> 명사로 변경
 
---
+----
+
 이 레포지터리는 Johannes Gätjen의 [Semantlich](http://semantlich.johannesgaetjen.de/)
 ([소스코드](https://github.com/gaetjen/semantle-de))를 포크하여,
 한국어로 플레이할 수 있도록 수정한 것입니다.
